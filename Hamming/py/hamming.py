@@ -38,8 +38,7 @@ def hamming_encode(num_array: list[int], dim: int):
     hamming_array = []
     hamming_array_len = len(num_array) + (1 + int(math.log(dim, 2))) * (int(
         len(num_array) / dim))
-    
-    print(hamming_array_len)
+
     # padding 0
     num_array = list(num_array)
     for _ in range(dim - (hamming_array_len % dim)):
@@ -63,18 +62,102 @@ def hamming_encode(num_array: list[int], dim: int):
     return hamming_array
 
 
+def hamming_decode(num_array: list[int], dim: int):
+    chunks = []
+    origin_num_array = []
+
+    # seperate continuous data stream to chunk with dim elements
+    for i in range(int(len(num_array) / dim)):
+        chunks.append(num_array[i * dim:i * dim + dim])
+
+    # process each chunk
+    # if any chunk produce error, return False
+
+    for c_idx, chunk in enumerate(chunks):
+        bit_1_list = []
+        parity_count = 0
+        for idx, bit in enumerate(chunk):
+            bit_1_list.append(idx) if bit else None
+
+        for e in bit_1_list:
+            parity_count ^= e
+
+        if parity_count != 0:
+            print(
+                f"There is an error in encoded number array at idx {parity_count + dim*c_idx}"
+            )
+            print("Correcting the array...")
+            chunks[c_idx][parity_count] ^= 0b01
+
+    print(chunks)
+
+    for chunk in chunks:
+        for idx, bit in enumerate(chunk):
+            if (not is_power_of_2(idx)) and (idx != 0):
+                origin_num_array.append(bit)
+
+    return origin_num_array
+
+
 def hamming_code_demo():
-    #while True:
-    matrix_dim = int(input("Input matrix dimension (ex 16, 32, 64, 128...): "))
+    # 1. input
+    hamming_degree = int(
+        input("Input hamming degree (ex 16, 32, 64, 128...): "))
 
-    bits = numpy.random.randint(0, 2, matrix_dim)
-    print(bits)
+    number_of_e = int(
+        input("Input number of elements in the array (> hamming degree): "))
 
-    result = hamming_encode(bits, 16)
-    print(result)
-    print(len(result))
+    origin_bits = numpy.random.randint(0, 2, number_of_e)
+    print(
+        f"Generated a number array with {number_of_e} elements: \nOrigin = {origin_bits}"
+    )
+
+    # 2. encoding
+    print(f"Encoding number array...")
+    encoded_bits = hamming_encode(origin_bits, hamming_degree)
+    print(
+        f"Encode completed.\nHere is the hamming encoded version with {hamming_degree} degree: \nEncoded = {encoded_bits}"
+    )
+
+    # 3. Flip a bit to simulate an bit error
+    fault_bits = encoded_bits.copy()
+
+    error_bit = numpy.random.randint(0, number_of_e)
+    fault_bits[error_bit] ^= 0b1
+    print(
+        f"Flip a bit at index {error_bit} from {encoded_bits[error_bit]} to {fault_bits[error_bit]}"
+    )
+    print(f"Fault array = {fault_bits}")
+
+    # 4. Decoding
+    print(f"Decoding number array...")
+    decoded_bits = hamming_decode(fault_bits, hamming_degree)
+
+    print(f"Decode completed, here is the original number array")
+    print(f"Decoded = {decoded_bits[:number_of_e]}")  #ignoring padding bits
+    # 5. Rechecking
+    for idx, (e1, e2) in enumerate(zip(decoded_bits, origin_bits)):
+        if e1 != e2:
+            print("Recheck faied")
+            print(
+                f"Decoded array is different at bit {idx}: {e1} (expected) vs {e2} (decoded output)"
+            )
+            return
+
+    # Done
+    print("===========SUMMARY===========")
+    print(
+        f"Hamming code degree of {hamming_degree} with {number_of_e} elements")
+    print(
+        f"Flip a bit at index {error_bit} from {encoded_bits[error_bit]} to {fault_bits[error_bit]} in encoded bits"
+    )
+    print(f"Random origin = {[int(b) for b in origin_bits]}")
+    print(f"Encoded =       {encoded_bits}")
+    print(f"Fault array =   {fault_bits}")
+    print(f"Decoded =       {decoded_bits[:number_of_e]}")
+
+    print("Demo completed")
 
 
 if __name__ == "__main__":
-    print("Hello me")
     hamming_code_demo()
